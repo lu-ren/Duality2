@@ -18,10 +18,11 @@ def createRandomB64(nbytes):
 
     return base64.b64encode(os.urandom(nbytes)).decode('utf-8')
 
-def getGeneratedSecret(filePath, pin):
+def getGeneratedSecret(filePath, pin, target):
 
     with open(filePath, 'r') as f:
-        fileSecret = f.read().strip()
+        data = json.load(f)
+        fileSecret = data[target] if target in data else data['default']
 
     t = fileSecret + pin
     m = hashlib.sha512()
@@ -112,7 +113,7 @@ if __name__ == '__main__':
             pullRepoStore(repoUrl)
 
         pin = getpass.getpass(prompt='Enter pin: ')
-        seed = getGeneratedSecret(FILEPART, pin)
+        seed = getGeneratedSecret(FILEPART, pin, parsed.target)
         passwdBytes = getGeneratedPasswordBytes(seed, parsed.target)
 
         passwdString = mapToGeneratedPassword(passwdBytes)
