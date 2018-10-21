@@ -1,19 +1,20 @@
 import argparse
 import base64
-import hashlib
 import getpass
+import hashlib
+import json
 import math
 import os
+import pyperclip
 import string
 import sys
-import pyperclip
 
 from git import Repo
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cache/')
 FILEPART = os.path.join(CACHE_DIR, 'filepart')
 
-def createFilePart(nbytes):
+def createRandomB64(nbytes):
 
     return base64.b64encode(os.urandom(nbytes)).decode('utf-8')
 
@@ -46,6 +47,33 @@ def chunkBytes(string, length):
 
     return (string[0 + i: length + i] for i in range(0, len(string), length))
 
+def createInitialFilePart():
+
+    if os.path.isdir(CACHE_DIR):
+        print('cache already exists!')
+        sys.exit(1)
+
+    os.mkdir(CACHE_DIR)
+    data = {'default': createRandomB64(1000)}
+
+    with open(FILEPART, 'w') as f:
+        f.write(json.dumps(data))
+
+    print('cache created successfully! Now create a PRIVATE repo and host your file secret there')
+
+def updateFilePart(updateTarget):
+    assert(os.path.isdir(CACHE_DIR))
+
+    with open(FILEPART, 'r') as f:
+        data = json.load(f)
+    
+    data[updateTarget] = createRandomB64(1000)
+
+    with open(FILEPART, 'w') as f:
+        f.write(json.dumps(data))
+
+    print(f'{updateTarget} updated successfully')
+
 if __name__ == '__main__':
     
     def pullRepoCache(repoUrl):
@@ -56,44 +84,40 @@ if __name__ == '__main__':
         origin.pull(origin.refs[0].remote_head)
     
     parser = argparse.ArgumentParser(description='A secret file based password generator')
-    parser.add_argument('-t', action='store', dest='target',
-            help='Target domain')
-    parser.add_argument('-s', action='store_true', dest='secret',
-            help='Create a secret output')
-    parser.add_argument('-p', '--print', action='store_true', dest='print',
+    subparser = parser.add_subparsers(help='Generate secret subparser')
+    parserA = subparser.add_parser('gen', help='Generate secret')
+    parserA.add_argument('-t', action='store', dest='target',
+            help='Target domain to generate')
+    parserA.add_argument('-p', '--print', action='store_true', dest='print',
             help='Print the password to console')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-s', action='store_true', dest='secret',
+            help='Create a secret output')
+    group.add_argument('-c', action='store', dest='updateTarget',
+            help='Change the password for a target domain')
 
     parsed = parser.parse_args()
 
-    if not (parsed.secret or parsed.target):
-        parser.print_help()
-        sys.exit(1)
-
-    if parsed.target and parsed.secret:
-            parser.print_help()
-            sys.exit(1)
-
     if parsed.secret:
-        if os.path.isdir(CACHE_DIR):
-            print('cache already exists!')
-            sys.exit(1)
-        os.mkdir(CACHE_DIR)
-        with open(FILEPART, 'w') as f:
-            f.write(createFilePart(1000))
-        print('cache created successfully! Now create a PRIVATE repo and host your file secret there')
+        createInitialFilePart()
         sys.exit(0)
 
-    if not os.path.isdir(CACHE_DIR):
-        repoUrl = input('Please enter the git repo url containing the file secret: ').strip()
-        pullRepoCache(repoUrl)
+    if parsed.updateTarget:
+        updateFilePart(parsed.updateTarget)
+        sys.exit(0)
 
-    pin = getpass.getpass(prompt='Enter pin: ')
-    seed = getGeneratedSecret(FILEPART, pin)
-    passwdBytes = getGeneratedPasswordBytes(seed, parsed.target)
+    if parsed.target:
+        if not os.path.isdir(CACHE_DIR):
+            repoUrl = input('Please enter the git repo url containing the file secret: ').strip()
+            pullRepoCache(repoUrl)
 
-    passwdString = mapToGeneratedPassword(passwdBytes)
-    pyperclip.copy(passwdString)
-    print('Password is copied to system clipboard!')
+        pin = getpass.getpass(prompt='Enter pin: ')
+        seed = getGeneratedSecret(FILEPART, pin)
+        passwdBytes = getGeneratedPasswordBytes(seed, parsed.target)
 
-    if (parsed.print):
-        print(passwdString)
+        passwdString = mapToGeneratedPassword(passwdBytes)
+        pyperclip.copy(passwdString)
+        print('Password is copied to system clipboard!')
+
+        if (parsed.print):
+            print(passwdString)
