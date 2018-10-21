@@ -11,8 +11,8 @@ import sys
 
 from git import Repo
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cache/')
-FILEPART = os.path.join(CACHE_DIR, 'filepart')
+STORE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'store/')
+FILEPART = os.path.join(STORE_DIR, 'filepart')
 
 def createRandomB64(nbytes):
 
@@ -49,20 +49,20 @@ def chunkBytes(string, length):
 
 def createInitialFilePart():
 
-    if os.path.isdir(CACHE_DIR):
-        print('cache already exists!')
+    if os.path.isdir(STORE_DIR):
+        print('store already exists!')
         sys.exit(1)
 
-    os.mkdir(CACHE_DIR)
+    os.mkdir(STORE_DIR)
     data = {'default': createRandomB64(1000)}
 
     with open(FILEPART, 'w') as f:
         f.write(json.dumps(data))
 
-    print('cache created successfully! Now create a PRIVATE repo and host your file secret there')
+    print('store created successfully! Now create a PRIVATE repo and host your file secret there')
 
 def updateFilePart(updateTarget):
-    assert(os.path.isdir(CACHE_DIR))
+    assert(os.path.isdir(STORE_DIR))
 
     with open(FILEPART, 'r') as f:
         data = json.load(f)
@@ -76,9 +76,9 @@ def updateFilePart(updateTarget):
 
 if __name__ == '__main__':
     
-    def pullRepoCache(repoUrl):
-        os.mkdir(CACHE_DIR)
-        repo = Repo.init(CACHE_DIR)
+    def pullRepoStore(repoUrl):
+        os.mkdir(STORE_DIR)
+        repo = Repo.init(STORE_DIR)
         origin = repo.create_remote('origin', repoUrl)
         origin.fetch()
         origin.pull(origin.refs[0].remote_head)
@@ -107,9 +107,9 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if parsed.target:
-        if not os.path.isdir(CACHE_DIR):
+        if not os.path.isdir(STORE_DIR):
             repoUrl = input('Please enter the git repo url containing the file secret: ').strip()
-            pullRepoCache(repoUrl)
+            pullRepoStore(repoUrl)
 
         pin = getpass.getpass(prompt='Enter pin: ')
         seed = getGeneratedSecret(FILEPART, pin)
