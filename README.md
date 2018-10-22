@@ -2,7 +2,13 @@
 Duallity2 is a simple python-based generative password manager.
 It generates passwords based on three inputs: a file secret, a pin, and the url.
 
+Generating passwords is as follows:
+- Intermediate := SHA512(pin + fileSecret)
+- 100,000 rounds of pdkf2_hmac(Intermediate + url)
+
 The file secret is intended to be stored and managed in a private git repo.
+
+In a way, the password to your git repo can be considered your master password.
 
 ## Requirements
 

@@ -32,13 +32,13 @@ def getGeneratedSecret(filePath, pin, target):
 
 def getGeneratedPasswordBytes(seed, target):
 
-    return hashlib.pbkdf2_hmac('sha512', seed, target.encode('utf-8'), 10000)
+    return hashlib.pbkdf2_hmac('sha512', seed, target.encode('utf-8'), 100_000)
 
 def mapToGeneratedPassword(passwdBytes):
 
     specials = '!@#$%&*?{}'
     elements = list(string.ascii_lowercase + string.ascii_uppercase + string.digits + specials)
-    passwdLength = 16
+    passwdLength = 20
     chunkLength = math.floor(len(passwdBytes)/passwdLength)
     values = [int.from_bytes(chunk, byteorder='big', signed=False) for chunk in chunkBytes(passwdBytes, chunkLength)]
 
